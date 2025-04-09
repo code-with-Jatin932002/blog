@@ -1,58 +1,52 @@
-const Post = require("../models/Post");
-const User = require("../models/User");
 
-/**
- * @desc Fetches all posts with user details
- * @route GET /api/posts
- * @access Public
- */
+const express = require("express");
+const authMiddleware = require("../middleware/authMiddleware"); // ✅ Protect routes
+const Post = require("../models/Post"); // ✅ Import Post model
+const User = require("../models/User"); // ✅ Import User model
 
-const getPosts = async (req, res) => {
+const router = express.Router();
+
+// ✅ Fetch All Posts (Public Route)
+router.get("/", async (req, res) => {
   try {
-    // Retrieve all posts and populate user details (first name, last name, email)
     const posts = await Post.find().populate("user", "firstName lastName email");
     res.json(posts);
   } catch (error) {
     res.status(500).json({ message: "Error fetching posts", error: error.message });
   }
-};
+});
 
-/**
- * @desc Creates a new post
- * @route POST /api/posts
- * @access Private (Requires authentication)
- */
-
-const createPost = async (req, res) => {
+// ✅ Create a New Post (Protected Route - Requires Login)
+router.post("/", authMiddleware, async (req, res) => {
   try {
     const { title, content } = req.body;
 
-     // Validate that title and content are provided
     if (!title || !content) {
       return res.status(400).json({ message: "Title and content are required" });
     }
 
-     // Fetch the user details from the database
+    // Fetch the user details
     const user = await User.findById(req.user.id).select("firstName lastName email");
 
     if (!user) {
       return res.status(404).json({ message: "User not found" });
     }
 
-     // Create a new post object
     const newPost = new Post({
       title,
       content,
-      user: user._id, // Store user ID as a reference
-      author: `${user.firstName} ${user.lastName}`,
-      authorEmail: user.email,
+      user: user._id, // Store user reference
+      author: `${user.firstName} ${user.lastName}`, // Store author name
+      authorEmail: user.email, // Store author email
     });
 
     await newPost.save();
     res.status(201).json({ message: "Post created successfully", post: newPost });
+
   } catch (error) {
+    console.error(error);
     res.status(500).json({ message: "Error creating post", error: error.message });
   }
-};
+});
 
-module.exports = { getPosts, createPost };
+module.exports = router;
