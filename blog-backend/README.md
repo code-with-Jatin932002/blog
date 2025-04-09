@@ -16,8 +16,6 @@ This is the backend API for BLOG APP. It provides a RESTful API for managing var
 
 .Authentication: JWT / OAuth
 
-
-
 #Installation
 
 1. Clone the repository:
